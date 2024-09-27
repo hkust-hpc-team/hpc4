@@ -5,11 +5,11 @@ Overview
 --------
 This guide will assist you in migrating your work from the HPC3 system to the new HPC4 system. The process involves several key steps:
 
-1. Transferring your data and code from HPC3 to HPC4
-2. Accessing the new HPC4 system
-3. Compiling your code on HPC4
-4. Testing your code on HPC4
-5. Running large jobs on HPC4 using SLURM
+1. `Transferring your data and code from HPC3 to HPC4 <#step-1-transfer-data>`_
+2. `Accessing the new HPC4 system <#step-2-compiling-code>`_
+3. `Compiling your code on HPC4 <#step-3-testing-compiled-program>`_
+4. `Testing your code on HPC4 <#step-4-testing-compiled-program>`_
+5. `Running large jobs on HPC4 using SLURM <#step-5-production-run-with-slurm>`_
 
 Each step is crucial for ensuring a smooth transition to the new system.
 
@@ -17,53 +17,194 @@ While this guide aims to make the process as straightforward as possible, if you
 
 Step 1: Transfer Data
 ---------------------
-In this step, you will transfer your files from HPC3 to HPC4. This process can be conceptualized as relocating your digital workspace from one computing environment to another. We will utilize two primary tools:
+In this initial step, you will transfer your files from HPC3 to HPC4. This process can be conceptualized as migrating your digital research environment from one computing infrastructure to another. We will utilize two primary tools:
 
-- ``sshfs``: This tool allows access to HPC3's files as if they were locally present on HPC4.
-- ``fpsync``: This tool efficiently copies files from one directory to another by grouping files into batches and synchronizing them in parallel.
+- ``sshfs``: This tool enables access to HPC3's file system as if it were locally mounted on HPC4.
+- ``fpsync``: This utility efficiently copies files between directories by grouping them into batches and synchronizing them in parallel.
 
-The following procedure outlines how to copy files from your HPC3 home directory:
+Transferring Files from Your HPC3 Home Directory
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Follow these steps to transfer files from your HPC3 home directory:
 
 .. code-block:: bash
+   # Run on >>> HPC4 <<<
+   # ===================
 
-   # Step 1: Create a directory on HPC4 to access HPC3 files
+
+   # 1. Create a mount point on HPC4 for HPC3 files
+   #
+   #[itsc@login1 ~]$
    mkdir ~/hpc3-storage 
 
-   # Step 2: Connect to HPC3's file system
-   sshfs $USER@hpc3.ust.hk:/home/$USER ~/hpc3-storage
 
-   # Step 3: Copy files from HPC3 to HPC4
-   # This command will copy all files, displaying progress (-vv) and using 16 parallel processes (-n 16)
+   # 2. Mount HPC3's file system
+   #
+   #[itsc@login1 ~]$
+   sshfs $USER@hpc3.ust.hk:/home/$USER ~/hpc3-storage
+   #.. (itsc@hpc3.ust.hk) Password: 
+   #.. (itsc@hpc3.ust.hk) Duo two-factor login for itsc
+   #.. Enter a passcode or select one of the following options:
+   #.. 1. Duo Push to +XXX XXXX 9092
+   #.. 2. SMS passcodes to +XXX XXXX 9092 (next code starts with: 1)
+   #.. 
+   #.. Passcode or option (1-2): 1
+
+
+   # 3. Verify the mounted directory
+   #
+   #[itsc@login1 ~]$
+   ls ~/hpc3-storage/my-source-code/
+   #.. file1.c  file2.c  file3.c  ...
+
+
+   # 3. Copy files from HPC3 to HPC4
+   #    This command copies all files, displaying progress (-vv) and using 16 parallel processes (-n 16)
+   #
+   #[itsc@login1 ~]$
    fpsync -vv -f 1024 -n 16 ~/hpc3-storage/my-source-code/ ~/my-source-code/
 
-   # Step 4: Disconnect from HPC3's file system when finished
-   fusermount -u ~/hpc3-storage && rmdir ~/hpc3-storage
+   #.. 1727407161 Info: [41058] Syncing ~/hpc3-storage/my-source-code/ => ~/my-source-code/
+   #.. 1727407161 Info: Run ID: 1727407161-41058
+   #.. 1727407161 Info: Start time: Fri Sep 27 11:19:21 HKT 2024
+   #.. 1727407161 Info: Concurrent sync jobs: 16
+   #.. 1727407161 Info: Workers: local
+   #.. 1727407161 Info: Shared dir: /tmp/fpsync
+   #.. 1727407161 Info: Temp dir: /tmp/fpsync
+   #.. 1727407161 Info: Tool name: "rsync"
+   #.. 1727407161 Info: Tool path: "/usr/bin/rsync"
+   #.. 1727407161 Info: Tool options: "-lptgoD -v --numeric-ids"
+   #.. 1727407161 Info: Fpart options: "-x|.zfs|-x|.snapshot*|-x|.ckpt"
+   #.. 1727407161 Info: Max files or directories per sync job: 2048
+   #.. 1727407161 Info: Max bytes per sync job: 10G
+   #.. 1727407161 ===> Starting Fpart
+   #.. 1727407161 <=== Fpart started (from sub-shell pid=41157)
+   #.. 1727407161 ===> Analyzing filesystem...
+   #.. 1727407161 ===> Use ^C to abort, ^T (SIGINFO) to display status
+   #.. 1727407161 ===> [QMGR] Starting queue manager
+   #.. 1727407161 ==> [FPART] Partition 1 written
+   #.. 1727407161 ==> [FPART] Partition 2 written
+   #.. 1727407161 => [QMGR] Starting job /tmp/fpsync/work/1727407161-41058/1 (local)
+   #.. 1727407161 ==> [FPART] Partition 3 written
+   #.. 1727407161 => [QMGR] Starting job /tmp/fpsync/work/1727407161-41058/2 (local)
+   #.. ...
+   #.. 1727407162 <=== Fpart crawling finished
+   #.. 1727407162 <=== [QMGR] Done submitting jobs. Waiting for them to finish.
+   #.. 1727407163 <= [QMGR] Job 41793:12:local finished
+   #.. 1727407163 <= [QMGR] Job 41806:13:local finished
+   #.. ... 
+   #.. 1727407443 <=== [QMGR] Queue processed
+   #.. 1727407443 <=== Parts done: 13/13 (100%), remaining: 0
+   #.. 1727407443 <=== Time elapsed: 12s, remaining: 0s (~1s/job)
+   #.. 1727407443 <=== Fpsync completed without error in 22s.
+   #.. 1727407443 <=== End time: Fri Sep 27 11:24:03 HKT 2024
 
-For larger datasets stored in the scratch space, employ a similar process:
+
+   # 4. Unmount HPC3's file system when finished
+   #
+   #[itsc@login1 ~]$
+   pkill sshfs && rmdir ~/hpc3-storage
+
+Transferring Large Datasets from Scratch Space
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+For larger datasets stored in the scratch space, it's crucial to first estimate the data size:
 
 .. code-block:: bash
+   # Run on >>> HPC3 <<<
+   # ===================
 
-   # Create a mounting point for HPC3 scratch space
+   # Determine the total size of your dataset
+   #
+   # itsc@login-0 ~]$
+   du -sh /scratch/PI/[pi-name]/path/to/dataset/
+   #.. 102G   /scratch/PI/[pi-name]/path/to/dataset/
+
+This command will display the total size of the specified directory and its contents.
+
+.. note::
+   If your total data size exceeds 500GB, you'll need to request additional quota. Please email `cchelp@ust.hk <mailto:cchelp@ust.hk>`_ with the following information:
+   
+   - Your Principal Investigator's username
+   - Current data size in HPC3 (as determined by the ``du -sh`` command)
+   - Requested quota for HPC4, considering:
+      - Current data volume
+      - Storage needed for research outputs
+      - Anticipated data growth in the near future
+
+Transfer Time Estimation
+^^^^^^^^^^^^^^^^^^^^^^^^
+Large data transfers can be time-consuming. It's advisable to plan accordingly and consider initiating transfers during off-peak hours. The following table provides estimated transfer times based on data volume, assuming a typical transfer speed of 2Gbps:
+
++----------+------------------+
+| Data Size| Estimated Time   |
++==========+==================+
+| 1 GB     | 4 seconds        |
++----------+------------------+
+| 10 GB    | 40 seconds       |
++----------+------------------+
+| 100 GB   | 6.7 minutes      |
++----------+------------------+
+| 1 TB     | 1.1 hours        |
++----------+------------------+
+| 10 TB    | 11.1 hours       |
++----------+------------------+
+
+Please note that these are approximate times and may vary based on network conditions and other factors.
+
+Transferring Data from Scratch Space
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Once you've estimated your data size and requested additional quota if necessary, follow these steps to transfer data from the scratch space:
+
+.. code-block:: bash
+   # Run on >>> HPC4 <<<
+   # ===================
+   # [PLACEHOLDERS] are shown in square brackets:
+   #   - [PI-NAME]: Replace with your Principal Investigator's username
+
+
+   # 1. Create a mount point for HPC3 scratch space
+   #
+   #[itsc@login1 ~]$
    mkdir ~/hpc3-scratch
 
-   # Connect to HPC3's scratch space
-   sshfs $USER@hpc3.ust.hk:/scratch/PI/$USER ~/hpc3-scratch
 
-   # Copy datasets to HPC4's scratch space
-   fpsync -vv -f 2048 -s 10G -n 16 /home/$USER/hpc3-scratch/path/to/hpc3/dataset/ /scratch/$USER/my-hpc3-dataset/
+   # 2. Mount HPC3's scratch space
+   #
+   #[itsc@login1 ~]$
+   sshfs $USER@hpc3.ust.hk:/scratch/PI/[PI-NAME] ~/hpc3-scratch
 
-   # Disconnect when finished
-   fusermount -u ~/hpc3-scratch && rmdir ~/hpc3-scratch
+   # 3. Verify the mounted directory
+   #
+   #[itsc@login1 ~]$
+   ls ~/hpc3-scratch/path/to/hpc3/dataset/
 
-Note: Replace ``PI`` with your Principal Investigator's username if necessary.
 
-Important considerations:
-- The ``-vv`` option displays detailed progress of the file transfer.
-- The ``-f 2048`` option sets the maximum number of files per batch to 2048.
-- The ``-s 10G`` option sets the approximate total file size per batch to 10GB.
-- The ``-n 16`` option utilizes 16 parallel processes for faster copying. Please do not adjust this option.
+   # 4. Copy datasets to HPC4's scratch space
+   #    See optimization options below for faster transfer
+   #
+   #[itsc@login1 ~]$
+   fpsync -vv -f 2048 -s 10G -n 16 ~/hpc3-scratch/path/to/hpc3/dataset/ /scratch/[PI-NAME]/my-hpc3-dataset/
 
-Upon completion of these steps, your code and datasets will be available on the HPC4 system, prepared for subsequent stages of compilation and execution.
+
+   # 4. Unmount when finished
+   #
+   #[itsc@login1 ~]$
+   pkill sshfs && rmdir ~/hpc3-scratch
+
+Optimizing fpsync Performance
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``fpsync`` command offers several options to optimize transfer performance:
+
+- ``-vv``: Displays detailed progress of the file transfer.
+- ``-f 2048``: Sets the maximum number of files per batch to 2048. 
+   - Increase this value for numerous small files
+   - Decrease for a small number of large files
+- ``-s 10G``: Sets the approximate total file size per batch to 10GB. 
+   - Consider increasing for very large files (e.g., video datasets)
+- ``-n 16``: Utilizes 16 parallel processes for faster copying. Please maintain this setting.
+
+Verification
+^^^^^^^^^^^^
+After completing these steps, your code and datasets will be available on the HPC4 system, ready for subsequent stages of compilation and execution. We recommend verifying the successful transfer by comparing file sizes and counts in the source and destination directories.
 
 Step 2: Interactive Session
 ---------------------------
@@ -81,7 +222,7 @@ For Intel node (128 cores):
 
    srun -A jiy -p cpu -C intel --nodes=1 --ntasks-per-node=1 --cpus-per-task=128 --pty bash
 
-Step 3: Compile Code
+Step 3: Compiling Code
 --------------------
 Use the appropriate compiler based on the CPU type.
 
@@ -105,8 +246,8 @@ For Intel:
    # Compile example
    icc -O3 -march=native -mtune=native -qopenmp main.c -o main_intel
 
-Step 4: Test Small Case
------------------------
+Step 4: Testing Compiled Program
+--------------------------------
 Run a small test directly on the compiling node.
 
 Example:
@@ -122,7 +263,7 @@ Example:
    # Check the output
    cat output.txt
 
-Step 5: Large Run with SLURM
+Step 5: Production Run with SLURM
 ----------------------------
 Use ``sbatch`` command with a script for larger runs.
 
